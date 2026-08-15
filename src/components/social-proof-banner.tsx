@@ -1,140 +1,213 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useReducedMotion } from "motion/react";
 import { motion } from "motion/react";
-import FlutedGlass, { getFlutedPreset } from "@/components/ui/fluted-glass";
-import { socialProofBanner } from "@/lib/content";
+import { site } from "@/lib/content";
+import { cn } from "@/lib/utils";
 
-/**
- * Waves geometry (shape: wave, contour distortion, stretch) fused with the
- * hero Folds lighting dial-in — full-bleed, zero margins so the wave reads
- * edge to edge across the banner.
- */
-const glassParams = {
-  ...getFlutedPreset("Waves").params,
-  // Hero lighting / material
-  colorBack: "#00000000",
-  colorShadow: "#000000",
-  colorHighlight: "#ffffff",
-  shadows: 0.62,
-  highlights: 0,
-  blur: 0.49,
-  edges: 0.5,
-  grainMixer: 0.08,
-  grainOverlay: 0.26,
-  // Waves structure — full width
-  shape: "wave" as const,
-  distortionShape: "contour" as const,
-  size: 0.78,
-  distortion: 0.65,
-  stretch: 1,
-  angle: 0,
-  shift: 0,
-  scale: 0.78,
-  fit: "cover" as const,
-  margin: 0,
-  marginLeft: 0,
-  marginRight: 0,
-  marginTop: 0,
-  marginBottom: 0,
+const FEATURES = [
+  "FOMO timers",
+  "Product bundles",
+  "Testimonials",
+  "Review widgets",
+  "AOV upsell popups",
+  "Sticky add-to-cart",
+  "Size guides",
+  "Trust badges",
+  "Shipping calculator",
+  "Urgency stock bars",
+  "Cross-sell rails",
+  "Gift with purchase",
+  "Subscription toggles",
+  "Variant swatches",
+  "Zoom galleries",
+  "Comparison tables",
+  "PDP FAQ blocks",
+  "Social proof toasts",
+  "Exit-intent offers",
+  "Free shipping meters",
+  "Wishlist",
+  "Recently viewed",
+  "Fit quizzes",
+  "Delivery estimates",
+  "Payment badges",
+  "Launch countdowns",
+  "Volume discounts",
+  "Cart drawers",
+  "Quick-view modals",
+  "Low-stock alerts",
+] as const;
+
+type PillTone =
+  | "coral"
+  | "coralSoft"
+  | "yellow"
+  | "yellowSoft"
+  | "purple"
+  | "purpleSoft"
+  | "ground"
+  | "charcoal";
+
+const TONES: PillTone[] = [
+  "coral",
+  "yellow",
+  "purple",
+  "ground",
+  "coralSoft",
+  "yellowSoft",
+  "purpleSoft",
+  "charcoal",
+];
+
+const toneClass: Record<PillTone, string> = {
+  coral: "bg-coral text-ground",
+  coralSoft: "bg-[#f08a74] text-charcoal",
+  yellow: "bg-yellow text-charcoal",
+  yellowSoft: "bg-[#f5f5a8] text-charcoal",
+  purple: "bg-purple text-ground",
+  purpleSoft: "bg-[#b57abf] text-charcoal",
+  ground: "bg-ground text-charcoal",
+  charcoal: "bg-black text-ground",
 };
 
-function pickRandomImage() {
-  const pool = socialProofBanner.images;
-  return pool[Math.floor(Math.random() * pool.length)]!;
+function pillTone(label: string, index: number): PillTone {
+  // Deterministic mix so SSR and client match
+  const n = label.length * 17 + index * 11;
+  return TONES[n % TONES.length]!;
 }
 
-function BannerGlass({ src }: { src: string }) {
-  const [image, setImage] = useState<HTMLImageElement | string>(src);
+function shuffleRow(seed: number): string[] {
+  const copy = [...FEATURES];
+  // Simple deterministic shuffle from seed
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = (seed * (i + 7) + i * 13) % (i + 1);
+    const tmp = copy[i]!;
+    copy[i] = copy[j]!;
+    copy[j] = tmp;
+  }
+  // Offset start so rows feel different
+  const offset = seed % copy.length;
+  return [...copy.slice(offset), ...copy.slice(0, offset)];
+}
 
-  useEffect(() => {
-    const img = new window.Image();
-    if (src.startsWith("http")) img.crossOrigin = "anonymous";
-    img.src = src;
-    img.onload = () => setImage(img);
-  }, [src]);
+const ROWS = [
+  { items: shuffleRow(3), duration: 180, reverse: false },
+  { items: shuffleRow(11), duration: 220, reverse: true },
+  { items: shuffleRow(19), duration: 160, reverse: false },
+] as const;
 
+function FeaturePill({ label, index }: { label: string; index: number }) {
   return (
-    <div aria-hidden className="absolute inset-0">
-      <FlutedGlass
-        {...glassParams}
-        image={image}
-        style={{ width: "100%", height: "100%" }}
-      />
-      <div className="absolute inset-0 bg-charcoal/40" />
-    </div>
+    <span
+      className={cn(
+        "inline-flex shrink-0 items-center rounded-full px-4 py-2 text-sm font-medium whitespace-nowrap",
+        toneClass[pillTone(label, index)],
+      )}
+    >
+      {label}
+    </span>
   );
 }
 
-function Stars() {
+function MarqueeRow({
+  items,
+  duration,
+  reverse,
+  reducedMotion,
+}: {
+  items: readonly string[];
+  duration: number;
+  reverse: boolean;
+  reducedMotion: boolean;
+}) {
+  if (reducedMotion) {
+    return (
+      <div className="flex flex-wrap justify-center gap-3.5 px-4">
+        {items.slice(0, 8).map((label, i) => (
+          <FeaturePill key={`${label}-${i}`} label={label} index={i} />
+        ))}
+      </div>
+    );
+  }
+
+  const loop = [...items, ...items];
+
   return (
-    <div
-      className="flex shrink-0 items-center gap-1.5 px-2.5 py-1.5 md:gap-2.5 md:px-3 md:py-2"
-      style={{
-        background:
-          "linear-gradient(90deg, color-mix(in srgb, var(--yellow) 55%, transparent) 0%, color-mix(in srgb, var(--yellow) 22%, transparent) 45%, transparent 100%)",
-      }}
-      aria-label="5 out of 5 stars"
+    <motion.div
+      className="flex w-max gap-3.5"
+      animate={{ x: reverse ? ["-50%", "0%"] : ["0%", "-50%"] }}
+      transition={{ duration, ease: "linear", repeat: Infinity }}
     >
-      {Array.from({ length: 5 }, (_, i) => (
-        <motion.svg
-          key={i}
-          viewBox="0 0 24 24"
-          aria-hidden
-          className="h-9 w-9 text-white md:h-14 md:w-14 lg:h-16 lg:w-16"
-          initial={{ opacity: 0, y: 10, scale: 0.85 }}
-          whileInView={{ opacity: 1, y: 0, scale: 1 }}
-          viewport={{ once: true, amount: 0.6 }}
-          transition={{
-            duration: 0.4,
-            delay: 0.05 * i,
-            ease: [0.22, 1, 0.36, 1],
-          }}
-        >
-          <path
-            fill="currentColor"
-            d="M12 1.6l2.9 5.88 6.5.94-4.7 4.58 1.11 6.46L12 16.4l-5.81 3.06 1.11-6.46-4.7-4.58 6.5-.94L12 1.6z"
-          />
-        </motion.svg>
+      {loop.map((label, i) => (
+        <FeaturePill
+          key={`${label}-${reverse ? "r" : "f"}-${i}`}
+          label={label}
+          index={i}
+        />
       ))}
-    </div>
+    </motion.div>
   );
 }
 
 /**
- * Social-proof snap band between Contact and FAQ: random image under
- * full-width wave glass, white stars, booking CTA.
+ * Compact charcoal band — CRO / PDP feature pills in three staggered marquees.
+ * Replaces the previous glass social-proof banner.
  */
 export function SocialProofBanner() {
-  const [bg, setBg] = useState(socialProofBanner.images[0]!);
-
-  useEffect(() => {
-    setBg(pickRandomImage());
-  }, []);
+  const reducedMotion = useReducedMotion() ?? false;
 
   return (
     <section
-      id="social-proof"
-      aria-label="Client satisfaction"
-      className="relative flex min-h-[180px] items-center overflow-hidden border-t border-charcoal/10 py-8 md:h-[28svh] md:min-h-[220px] md:snap-start md:py-0 lg:min-h-[240px]"
+      id="cro-features"
+      aria-label="CRO and PDP features"
+      className="relative flex flex-col justify-center overflow-hidden border-t border-charcoal/10 bg-charcoal py-10 md:min-h-[50svh] md:snap-start md:py-12"
     >
-      <BannerGlass src={bg.src} />
-      <span className="sr-only">{bg.alt}</span>
+      <div className="mx-auto w-full max-w-6xl px-6 text-left md:px-8">
+        <h2 className="max-w-[22ch] font-sans text-2xl font-semibold leading-tight tracking-tight text-ground md:text-3xl">
+          Do you have these CRO &amp; PDP improvements?
+        </h2>
+        <p className="mt-2 max-w-[44ch] text-sm leading-relaxed text-ground/65 md:text-base">
+          Custom Shopify features that lift conversion — not another theme
+          preset.
+        </p>
+      </div>
 
-      <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-x-8 gap-y-4 px-6 md:px-8">
-        <Stars />
+      <div
+        className="relative mt-7 space-y-4 md:mt-8"
+        style={
+          reducedMotion
+            ? undefined
+            : {
+                maskImage:
+                  "linear-gradient(90deg, transparent 0%, #000 6%, #000 94%, transparent 100%)",
+                WebkitMaskImage:
+                  "linear-gradient(90deg, transparent 0%, #000 6%, #000 94%, transparent 100%)",
+              }
+        }
+      >
+        {ROWS.map((row, i) => (
+          <MarqueeRow
+            key={i}
+            items={row.items}
+            duration={row.duration}
+            reverse={row.reverse}
+            reducedMotion={reducedMotion}
+          />
+        ))}
+      </div>
 
-        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-4 sm:gap-6">
-          <p className="max-w-[18ch] text-right font-display text-2xl leading-[1.1] tracking-wide text-white lowercase sm:max-w-none sm:text-3xl md:text-4xl">
-            {socialProofBanner.headline}
-          </p>
-          <a
-            href={socialProofBanner.href}
-            className="inline-flex shrink-0 items-center bg-white px-5 py-2.5 text-sm font-medium text-charcoal transition-colors hover:bg-yellow"
-          >
-            {socialProofBanner.cta}
-          </a>
-        </div>
+      <div className="mx-auto mt-8 flex w-full max-w-6xl flex-col items-start gap-3 px-6 text-left md:mt-10 md:px-8">
+        <a
+          href={site.bookCallUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center bg-coral px-6 py-3 text-sm font-medium text-ground transition-colors hover:bg-black"
+        >
+          Book a call
+        </a>
+        <p className="text-xs text-ground/50">
+          Built in custom Liquid &amp; code — tailored to your funnel.
+        </p>
       </div>
     </section>
   );

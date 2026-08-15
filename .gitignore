@@ -9,6 +9,7 @@ build/
 .env
 .env*.local
 .env*
+!.env.example
 
 # debug / tooling
 npm-debug.log*
@@ -30,6 +31,9 @@ Thumbs.db
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local audit store (demo / no Redis)
+.data/
 
 # vercel
 .vercel

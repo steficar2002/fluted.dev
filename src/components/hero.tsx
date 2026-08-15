@@ -1,15 +1,18 @@
 "use client";
 
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, FormEvent, useEffect, useRef, useState } from "react";
 import {
   motion,
   useMotionTemplate,
   useMotionValue,
   useSpring,
 } from "motion/react";
+import { useRouter } from "next/navigation";
 import FlutedGlass, { getFlutedPreset } from "@/components/ui/fluted-glass";
+import { AuditCaptcha } from "@/components/audit-captcha";
 import { Magnetic } from "@/components/motion/magnetic";
 import { TextEffect } from "@/components/motion/text-effect";
+import { AUDIT_CAPTCHA_STORAGE_KEY } from "@/lib/audit/captcha-public";
 import {
   featuredTestimonials,
   heroBenefits,
@@ -251,6 +254,24 @@ function TrustBand() {
 }
 
 export function Hero() {
+  const router = useRouter();
+  const [auditUrl, setAuditUrl] = useState("");
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [auditError, setAuditError] = useState<string | null>(null);
+
+  function onAuditSubmit(e: FormEvent) {
+    e.preventDefault();
+    setAuditError(null);
+    const trimmed = auditUrl.trim();
+    if (!trimmed) return;
+    if (!captchaToken) {
+      setAuditError("Complete the captcha before running the audit.");
+      return;
+    }
+    sessionStorage.setItem(AUDIT_CAPTCHA_STORAGE_KEY, captchaToken);
+    router.push(`/audit/run?url=${encodeURIComponent(trimmed)}`);
+  }
+
   return (
     <section
       id="top"
@@ -292,23 +313,42 @@ export function Hero() {
             {site.heroSub}
           </p>
 
-          <div className="mt-4 flex flex-wrap items-center gap-3 md:mt-5">
-            <Magnetic intensity={0.4} range={90}>
-              <a
-                href={site.bookCallUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center bg-charcoal px-5 py-3 text-sm text-ground transition-colors hover:bg-coral"
-              >
-                Book a call
-              </a>
-            </Magnetic>
-            <a
-              href="#method"
-              className="inline-flex items-center border border-charcoal/25 px-5 py-3 text-sm text-charcoal transition-colors hover:border-charcoal"
+          <div className="mt-4 md:mt-5">
+            <form
+              onSubmit={onAuditSubmit}
+              className="flex max-w-xl flex-col gap-3"
             >
-              See the method
-            </a>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
+                <label className="sr-only" htmlFor="hero-audit-url">
+                  Website to audit
+                </label>
+                <input
+                  id="hero-audit-url"
+                  type="text"
+                  inputMode="url"
+                  autoComplete="url"
+                  placeholder="enter your store.com"
+                  value={auditUrl}
+                  onChange={(e) => setAuditUrl(e.target.value)}
+                  className="min-h-12 flex-1 border border-charcoal/25 bg-white px-4 text-sm text-charcoal placeholder:text-charcoal/40 outline-none transition-colors focus:border-coral"
+                />
+                <Magnetic intensity={0.4} range={90}>
+                  <button
+                    type="submit"
+                    disabled={!auditUrl.trim() || !captchaToken}
+                    className="inline-flex min-h-12 w-full shrink-0 items-center justify-center bg-coral px-5 text-sm text-ground transition-colors hover:bg-charcoal disabled:cursor-not-allowed disabled:opacity-45 sm:w-auto"
+                  >
+                    Scan my store
+                  </button>
+                </Magnetic>
+              </div>
+              <AuditCaptcha onToken={setCaptchaToken} />
+              {auditError && (
+                <p className="text-sm text-coral" role="alert">
+                  {auditError}
+                </p>
+              )}
+            </form>
           </div>
         </div>
 
