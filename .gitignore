@@ -8,6 +8,7 @@ build/
 # env
 .env
 .env*.local
+.env*
 
 # debug / tooling
 npm-debug.log*
@@ -21,9 +22,17 @@ Thumbs.db
 .idea/
 .vscode/
 
-# brainstorm companion + local agent artifacts
+# local agent / design tooling artifacts
 .superpowers/
+.cursor/
+.impeccable/
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# vercel
+.vercel
+
+# certificates
+*.pem
